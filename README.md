@@ -1,5 +1,8 @@
 # Full-Stack Chat App - Kubernetes Deployment
 
+
+[Screencast from 2025-10-06 14-11-16.webm](https://github.com/user-attachments/assets/55aaf5c9-5f05-42ec-aff9-2f40dd43b056)
+
 A complete three-tier chat application deployed on Kubernetes with separate frontend, backend, and database components.
 
 ## 🏗️ Architecture Overview
@@ -264,3 +267,4 @@ kubectl get deployment <deployment-name> -n chat-app -o yaml
 
 
 This project is licensed under the MIT License. See the LICENSE file for more details.
+
