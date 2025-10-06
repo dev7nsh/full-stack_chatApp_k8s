@@ -1,219 +1,262 @@
-## 📝 Introduction:
+# Full-Stack Chat App - Kubernetes Deployment
 
-This project aims to provide a real-time chat experience that's both scalable and secure. With a focus on modern technologies, we're building an application that's easy to use and maintain.
+A complete three-tier chat application deployed on Kubernetes with separate frontend, backend, and database components.
 
+## 🏗️ Architecture Overview
 
-## Detailed Workflow Description:
+```mermaid
+graph TB
+    subgraph "Kubernetes Cluster"
+        subgraph "chat-app Namespace"
+            subgraph "Frontend Tier"
+                FE[Frontend Pod<br/>nginx:80]
+                FES[Frontend Service<br/>Port: 80]
+            end
+            
+            subgraph "Backend Tier"
+                BE[Backend Pod<br/>Node.js:5001]
+                BES[Backend Service<br/>Port: 5001]
+            end
+            
+            subgraph "Database Tier"
+                DB[MongoDB<br/>Port: 27017]
+                DBS[MongoDB Service<br/>Port: 27017]
+            end
+        end
+    end
+    
+    subgraph "External Access"
+        USER[👤 User]
+        PFBE[Port Forward<br/>Backend: 5001]
+        PFFE[Port Forward<br/>Frontend: 80]
+    end
+    
+    USER --> PFFE
+    USER --> PFBE
+    PFFE --> FES
+    PFBE --> BES
+    FES --> FE
+    BES --> BE
+    BE --> DBS
+    DBS --> DB
+    FE --> BES
+```
 
+## 🚀 Quick Start
 
-![image](https://github.com/user-attachments/assets/f845a188-8e70-42f7-8577-30af38e83053)
+### Prerequisites
+- Kubernetes cluster (kind, minikube, or cloud provider)
+- kubectl configured
+- Docker images available:
+  - `dockerdev7nsh/chatapp-frontend`
+  - `dockerdev7nsh/chatapp-backend`
 
-
-  - **User Interaction:**
-    - Users interact with the frontend application running in their browser. This includes actions like logging in, sending messages, and navigating through the chat interface.Frontend (React App):The frontend is responsible for rendering the user interface and handling user inputs.It communicates with the backend via HTTP requests (for RESTful APIs) and WebSocket connections (for real-time interactions).
-
-    - **Backend (Node.js/Express + Socket.io):**
-       - The backend handles all the server-side logic.It processes API requests from the frontend to perform actions such as user authentication, message retrieval, and message storage.Socket.io is used to manage real-time bi-directional communication between the frontend and the backend. This allows for instant messaging features, such as showing when users are typing or when new messages are sent.
-
-
-    - **MongoDB (Database):**
-       - MongoDB stores all persistent data for the application, including user profiles, chat messages, and any other relevant data.The backend interacts with MongoDB to retrieve, add, update, or delete data based on the requests it receives from the frontend.
-
-
-
-
-## ✨ Features:
-
-
-* **Real-time Messaging**: Send and receive messages instantly using Socket.io 
-* **User Authentication & Authorization**: Securely manage user access with JWT 
-* **Scalable & Secure Architecture**: Built to handle large volumes of traffic and data 
-* **Modern UI Design**: A user-friendly interface crafted with React and TailwindCSS 
-* **Profile Management**: Users can upload and update their profile pictures 
-* **Online Status**: View real-time online/offline status of users 
-
-
-## 🛠️ Tech Stack:
-
-
-* **Backend:** Node.js, Express, MongoDB, Socket.io
-* **Frontend:** React, TailwindCSS
-* **Containerization:** Docker
-* **Orchestration:** Kubernetes (planned)
-* **Web Server:** Nginx
-* **State Management:** Zustand
-* **Authentication:** JWT
-* **Styling Components:** DaisyUI
-
-
-## 🔧 Prerequisites:
-
-
-* **[Node.js](https://nodejs.org/)** (v14 or higher)
-* **[Docker](https://www.docker.com/get-started)** (for containerizing the app)
-* **[Git](https://git-scm.com/downloads)** (to clone the repository)
-
-
-## 📝 Setup .env File:
-
-
-1. Navigate to the `backend` directory:
+### 1. Create Kubernetes Cluster (using kind)
 ```bash
-cd backend
-```
-2. Create a `.env` file and add the following content (modify the values as needed):
-```env
-MONGODB_URI=mongodb://mongoadmin:secret@mongodb:27017/dbname?authSource=admin
-JWT_SECRET=your_jwt_secret_key
-PORT=5001
-```
-> **Note:** Replace `your_jwt_secret_key` with a strong secret key of your choice.
+# Create cluster with custom configuration
+kind create cluster --config cluster.yaml --name main
 
-### Clone the Repository
+# Verify cluster
+kubectl cluster-info
+kubectl get nodes
+```
 
+### 2. Deploy Application
 ```bash
-git clone https://github.com/iemafzalhassan/full-stack_chatApp.git
+# Clone the repository
+git clone <your-repo-url>
+cd full-stack_chatApp_k8s/K8s
+
+# Create namespace
+kubectl apply -f namespace.yaml
+
+# Deploy backend
+kubectl apply -f backend-deployement.yaml
+kubectl apply -f service-backend.yaml
+
+# Deploy frontend
+kubectl apply -f frontend-deployement.yaml
+kubectl apply -f frontend-service.yaml
+
+# Verify deployments
+kubectl get all -n chat-app
 ```
 
-## 🏗️ Build and Run the Application"
-
-Follow these steps to build and run the application:
-
-1. Build & Run the Containers:
-
+### 3. Access Application
 ```bash
-cd full-stack_chatApp
+# Port forward backend (API)
+kubectl port-forward service/backend -n chat-app 5001:5001 --address=0.0.0.0 &
+
+# Port forward frontend (UI)
+kubectl port-forward service/chatapp-service-frontend -n chat-app 8080:80 --address=0.0.0.0 &
 ```
+
+Access the application:
+- **Frontend**: http://localhost:8080
+- **Backend API**: http://localhost:5001
+
+## 📁 Project Structure
+
+```
+full-stack_chatApp_k8s/
+├── K8s/
+│   ├── namespace.yaml              # Creates chat-app namespace
+│   ├── backend-deployement.yaml    # Backend deployment (Node.js)
+│   ├── service-backend.yaml        # Backend service
+│   ├── frontend-deployement.yaml   # Frontend deployment (nginx)
+│   ├── frontend-service.yaml       # Frontend service
+│   └── cluster.yaml                # Kind cluster configuration
+├── src/                           # Application source code
+└── README.md                      # This file
+```
+
+## 🔧 Configuration Details
+
+### Backend Configuration
+- **Image**: `dockerdev7nsh/chatapp-backend`
+- **Port**: 5001
+- **Environment Variables**:
+  - `PORT=5001`
+  - `MONGODB_URI=mongodb://localhost:27017/chatapp`
+
+### Frontend Configuration
+- **Image**: `dockerdev7nsh/chatapp-frontend`
+- **Port**: 80
+- **Nginx configuration for API proxy**
+
+### Labels & Selectors
+- **Backend**: `app: chat-app-backend`
+- **Frontend**: `app: chat-app-frontend`
+
+## 🛠️ Deployment Flow
+
+```mermaid
+flowchart TD
+    A[Start] --> B[Create Kind Cluster]
+    B --> C[Apply Namespace]
+    C --> D[Deploy Backend]
+    D --> E[Deploy Backend Service]
+    E --> F[Deploy Frontend]
+    F --> G[Deploy Frontend Service]
+    G --> H[Verify Pods Running]
+    H --> I{All Pods Ready?}
+    I -->|No| J[Check Logs]
+    J --> K[Fix Issues]
+    K --> I
+    I -->|Yes| L[Setup Port Forwarding]
+    L --> M[Access Application]
+    M --> N[End]
+    
+    style A fill:#90EE90
+    style N fill:#FFB6C1
+    style I fill:#FFE4B5
+    style J fill:#FFA07A
+```
+
+## 📋 Commands Reference
+
+### Cluster Management
 ```bash
-docker-compose up -d --build
+# Create cluster
+kind create cluster --config cluster.yaml --name main
+
+# Delete cluster
+kind delete cluster --name main
+
+# List clusters
+kind get clusters
 ```
 
-2. Access the application in your browser:
-
-```
-http://localhost
-```
----
-
-## 🛠️ Getting Started
-
-Follow these simple steps to get the project up and running on your local Host using docker.
-
+### Application Management
 ```bash
-git clone https://github.com/iemafzalhassan/full-stack_chatApp.git
+# Apply all configurations
+kubectl apply -f .
+
+# Check status
+kubectl get all -n chat-app
+kubectl get pods -n chat-app
+kubectl get services -n chat-app
+
+# View logs
+kubectl logs <pod-name> -n chat-app
+kubectl logs -f <pod-name> -n chat-app  # Follow logs
+
+# Describe resources
+kubectl describe pod <pod-name> -n chat-app
+kubectl describe service <service-name> -n chat-app
 ```
 
+### Port Forwarding
 ```bash
-cd full-stack_chatApp
-```
-## Create a Docker network:
+# Background port forwarding
+kubectl port-forward service/backend -n chat-app 5001:5001 --address=0.0.0.0 &
+kubectl port-forward service/chatapp-service-frontend -n chat-app 8080:80 --address=0.0.0.0 &
 
+# Check running port forwards
+ps aux | grep port-forward
+
+# Stop port forwarding
+kill <PID>
+# or
+pkill -f "kubectl port-forward"
+```
+
+### Debugging
 ```bash
-docker network create full-stack
+# Check pod status
+kubectl get pods -n chat-app -o wide
+
+# Shell into pod
+kubectl exec -it <pod-name> -n chat-app -- /bin/bash
+
+# Check events
+kubectl get events -n chat-app --sort-by='.lastTimestamp'
+
+# Check resource usage
+kubectl top pods -n chat-app
+kubectl top nodes
 ```
 
-## 🛠️ Building the Frontend
+## 🔍 Troubleshooting
 
+### Common Issues
+
+1. **Pod in CrashLoopBackOff**
+   ```bash
+   kubectl logs <pod-name> -n chat-app
+   kubectl describe pod <pod-name> -n chat-app
+   ```
+
+2. **Service not accessible**
+   ```bash
+   # Check if service endpoints are available
+   kubectl get endpoints -n chat-app
+   
+   # Verify label selectors match
+   kubectl get pods -n chat-app --show-labels
+   ```
+
+3. **Port forward connection refused**
+   ```bash
+   # Check if application is listening on correct port
+   kubectl exec -it <pod-name> -n chat-app -- netstat -tulpn
+   ```
+
+4. **Image pull errors**
+   ```bash
+   # Check if image exists and is accessible
+   docker pull dockerdev7nsh/chatapp-backend
+   docker pull dockerdev7nsh/chatapp-frontend
+   ```
+
+### Label Mismatch Fix
+If you get "selector does not match template labels" error:
 ```bash
-cd frontend
+# Ensure deployment selector matches pod labels
+kubectl get deployment <deployment-name> -n chat-app -o yaml
 ```
 
-```bash
-docker build -t full-stack_frontend .
-```
 
-### Run the Frontend container:
-
-```bash
-docker run -d --network=full-stack  -p 5173:5173 --name frontend full-stack_frontend:latest
-```
-#### The frontend will now be accessible on port 5173.
-
-
-### Run the MongoDB Container:
-
-```bash
-docker run -d -p 27017:27017 --name mongo mongo:latest
-```
----
-
-## 🛠️ Building the Backend
-
-```bash
-cd backend
-```
-
-### Build the Backend image:
-
-```bash
-docker build -t full-stack_backend .
-```
-
-### Run the Backend container:
-
-```bash
-docker run -d --network=full-stack --add-host=host.docker.internal:host-gateway -p 5001:5001 --env-file .env full-stack_backend
-
-```
-#### This will build and run the backend container, exposing the backendAPI on port 5001.
-
-`Backend API: http://localhost:5001`
-
-### To Verify the conncetion between backend and databse:
-```bash
-docker-compose logs -f
-```
-
-### Once the backend and frontend containers are running, you can access the application in your browser:
-
-`Frontend: http://localhost`
-
-
-You can now interact with the real-time chat app and start messaging!
-
----
-
-
-
-### 🤝 Contributing
-
-
-We welcome contributions from DevOps & Developer of all skill levels! Here's how you can contribute:
-
-**Report bugs:** If you encounter any bugs or issues, please open an issue with detailed information.
-**Suggest features:** Have an idea for a new feature? Open an issue to discuss it with the community.
-**Submit pull requests:** If you have a fix or a feature you'd like to contribute, submit a pull request. Ensure your changes pass any linting or tests, if applicable.
-
-### 🌐 Join the Community
-
-We invite you to join our community of developers and contributors. Let's work together to build an amazing real-time chat application!
-
-* **Star this repository** to show your support
-* **Fork this repository** to contribute to the project
-* **Open an issue** to report bugs or suggest features
-* **Submit a pull request** to contribute code changes
-
-## 🔮 Future Plans
-
-
-This project is evolving, and here are a few exciting things on the horizon:
-
-* [ ] **CI/CD Pipelines:** Implement Continuous Integration and Continuous Deployment pipelines to automate testing and deployment.
-* [ ] **Kubernetes (K8s):** Add Kubernetes manifests for container orchestration to deploy the app on cloud platforms like AWS, GCP, or Azure.
-* [ ] **Feature Expansion:** Add more features like group chats, media sharing, and user status updates.
-* **Stay tuned for updates as we continue to improve and expand this project!**
-
----
-
-## 📚 Project Snapshots:
-
-![Settings](frontend/public/settings.png)
-
-![chat](frontend/public/chat.png)
-
-![logout](/frontend/public/logout.png)
-
-![Login](/frontend/public/login.png)
 
 
 
