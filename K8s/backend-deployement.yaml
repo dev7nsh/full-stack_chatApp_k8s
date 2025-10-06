@@ -1,0 +1,28 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chat-app
+  labels:
+    app: backend
+  namespace: chat-app
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: chat-app-container
+          image: dockerdev7nsh/chatapp-backend
+          env:
+            - name: PORT
+              value: "5001"
+            - name: MONGODB_URI
+              value: "mongodb://localhost:27017/chatapp"
+          ports:
+            - containerPort: 5001
